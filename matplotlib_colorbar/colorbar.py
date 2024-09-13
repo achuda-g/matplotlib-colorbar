@@ -38,9 +38,9 @@ from matplotlib.rcsetup import (
     defaultParams,
     ValidateInStrings,
     validate_float,
-    validate_legend_loc,
     validate_bool,
     validate_color,
+    _validators,
 )
 from matplotlib.artist import Artist
 from matplotlib.offsetbox import AnchoredOffsetbox, AuxTransformBox, VPacker, HPacker
@@ -48,7 +48,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib.text import Text
 from matplotlib.font_manager import FontProperties
-from matplotlib.colorbar import colorbar_factory
+from matplotlib.colorbar import Colorbar
 
 import numpy as np
 
@@ -63,6 +63,7 @@ validate_orientation = ValidateInStrings("orientation", ["horizontal", "vertical
 validate_ticklocation = ValidateInStrings(
     "orientation", ["auto", "left", "right", "bottom", "top"]
 )
+validate_legend_loc = _validators["legend.loc"]
 
 defaultParams.update(
     {
@@ -85,12 +86,11 @@ defaultParams.update(
 matplotlib.rcParams.validate = dict(
     (key, converter)
     for key, (default, converter) in defaultParams.items()
-    if key not in matplotlib._all_deprecated
+    if key not in matplotlib._deprecated_ignore_map
 )
 
 
 class Colorbar(Artist):
-
     zorder = 5
 
     _LOCATIONS = {
@@ -158,13 +158,13 @@ class Colorbar(Artist):
             (default: rcParams['colorbar.box_color'] or ``w``)
         :arg box_alpha: transparency of box
             (default: rcParams['colorbar.box_alpha'] or ``1.0``)
-        
+
         :arg font_properties: font properties of the label text, specified
             either as dict or `fontconfig <http://www.fontconfig.org/>`_
             pattern (XML).
         :type font_properties: :class:`matplotlib.font_manager.FontProperties`,
             :class:`str` or :class:`dict`
-        
+
         :arg ticks: ticks location
             (default: minimal and maximal values)
         :arg ticklabels: a list of tick labels (same length as ``ticks`` argument)
@@ -386,10 +386,14 @@ class Colorbar(Artist):
         box.draw(renderer)
 
     def _calculate_colorbar(
-        self, length_fraction, mappable, ticks=None, ticklabels=None,
+        self,
+        length_fraction,
+        mappable,
+        ticks=None,
+        ticklabels=None,
     ):
         """
-        Returns the positions, colors of all intervals inside the colorbar, 
+        Returns the positions, colors of all intervals inside the colorbar,
         and tick and ticklabels.
         """
         # Create dummy figure, axes and colorbar
@@ -398,7 +402,7 @@ class Colorbar(Artist):
         try:
             # Create dummy colorbar
             ax_dummy = fig_dummy.add_axes([0.0, 0.0, 1.0, 1.0])
-            colorbar_dummy = colorbar_factory(ax_dummy, mappable)
+            colorbar_dummy = Colorbar(ax_dummy, mappable)
 
             # Set ticks
             if ticks:
